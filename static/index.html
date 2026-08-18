@@ -317,6 +317,64 @@
         </form>
       </div>
 
+      <!-- EMAIL ALERTS CONFIGURATION -->
+      <div class="aura-card p-5 rounded-3xl flex flex-col gap-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fas fa-envelope-circle-check text-[#F26727] text-base"></i>
+            <h4 class="text-sm font-bold text-slate-800">Email & Instant Outage Alerts</h4>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-[#F26727] border border-orange-200">24/7 Outage Dispatch</span>
+        </div>
+        <form id="email-settings-form" class="flex flex-col gap-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Alert Recipient Email</label>
+            <input type="email" id="setting-alert-email" value="31pranav104@gmail.com" required placeholder="your-email@example.com" class="w-full bg-slate-50 border border-teal-100 rounded-2xl px-4 py-3 text-xs text-slate-800 font-mono focus:outline-none focus:border-cyan-500 font-medium">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">SMTP Server</label>
+              <input type="text" id="setting-smtp-server" value="smtp.gmail.com" placeholder="smtp.gmail.com" class="w-full bg-slate-50 border border-teal-100 rounded-2xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">SMTP Port</label>
+              <input type="number" id="setting-smtp-port" value="587" placeholder="587" class="w-full bg-slate-50 border border-teal-100 rounded-2xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 font-medium">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Sender Email</label>
+              <input type="email" id="setting-smtp-user" placeholder="sender@gmail.com" class="w-full bg-slate-50 border border-teal-100 rounded-2xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Sender App Password</label>
+              <input type="password" id="setting-smtp-pass" placeholder="App Password" class="w-full bg-slate-50 border border-teal-100 rounded-2xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 font-medium">
+            </div>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" id="setting-email-enabled" checked class="rounded border-teal-300 text-cyan-600 focus:ring-0">
+              <span class="text-xs font-semibold text-slate-700">Dispatch Email Alerts on Outage</span>
+            </label>
+          </div>
+          <div class="flex items-center gap-2 pt-2">
+            <button type="submit" class="flex-1 py-3 aura-teal-btn rounded-2xl font-bold text-xs shadow">Save Email Settings</button>
+            <button type="button" id="test-email-btn" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-xs transition-all flex items-center gap-1.5"><i class="fas fa-paper-plane text-[10px]"></i> Send Test Email</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- BROWSER & PUSH NOTIFICATIONS CARD -->
+      <div class="aura-card p-5 rounded-3xl flex items-center justify-between gap-4">
+        <div>
+          <h4 class="text-sm font-bold text-slate-800">Browser & Android Push Notifications</h4>
+          <p class="text-xs text-slate-500 mt-0.5">Receive native notifications even when browser tab is inactive</p>
+        </div>
+        <button id="enable-push-btn" class="px-4 py-2.5 aura-gradient-btn rounded-xl font-bold text-xs shadow flex items-center gap-1.5 whitespace-nowrap">
+          <i class="fas fa-bell"></i> Enable Push
+        </button>
+      </div>
+
       <div class="aura-card p-5 rounded-3xl flex flex-col gap-4">
         <h4 class="text-sm font-bold text-slate-800">Authentication & Security</h4>
         <form id="password-form" class="flex flex-col gap-3">

@@ -149,16 +149,27 @@ class WebsiteCrawler:
                 support_ticket_template=issue.get("support_ticket_template", "")
             )
             
-        # Dispatch Notification
+        # Dispatch Notification & Email Alert
         if self.detected_issues:
             top_issue = self.detected_issues[0]
+            notif_msg = f"AuraXL Deep Audit found {len(self.detected_issues)} issue(s) on {self.base_domain}. Health Score: {health_score}/100. Action required."
             add_notification(
                 title=f"Site Alert: {top_issue['title']}",
-                message=f"AuraXL Deep Audit found {len(self.detected_issues)} issue(s) on {self.base_domain}. Health Score: {health_score}/100. Action required.",
+                message=notif_msg,
                 severity=top_issue["severity"],
                 related_url=self.target_url,
                 category="AUDIT"
             )
+            try:
+                from email_notifier import send_email_alert
+                send_email_alert(
+                    title=top_issue['title'],
+                    severity=top_issue['severity'],
+                    details=f"{top_issue.get('description', notif_msg)}<br><br><strong>Root Cause:</strong> {top_issue.get('root_cause', 'N/A')}",
+                    issue_data=top_issue
+                )
+            except Exception as em_err:
+                print(f"Email alert error: {em_err}")
         else:
             add_notification(
                 title="Deep Audit: All Systems Optimal",

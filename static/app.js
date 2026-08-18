@@ -1,4 +1,4 @@
-﻿// AuraXL Agentic Monitor Frontend Logic - Real-Time Live Telemetry Edition
+// AuraXL Agentic Monitor Frontend Logic - Real-Time Live Telemetry Edition
 const DEFAULT_GLOBAL_BACKEND = "https://auraxl-monitor.onrender.com";
 
 let authToken = localStorage.getItem("auraxl_token") || "";
@@ -247,6 +247,74 @@ function setupEventListeners() {
       const res = await api("/settings", { method:"POST", body: JSON.stringify({ target_url: targetUrl, monitor_interval_minutes: interval, auto_monitor_enabled: autoEnabled.toString(), sound_alerts: soundEnabled.toString() }) });
       if (res.success) { showToast("Settings saved!", "success"); loadDashboard(); }
     } catch(e) { showToast("Failed to save settings.", "error"); }
+  });
+
+  // Email Settings Form
+  document.getElementById("email-settings-form")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("setting-alert-email").value.trim();
+    const smtpServer = document.getElementById("setting-smtp-server").value.trim();
+    const smtpPort = document.getElementById("setting-smtp-port").value.trim();
+    const smtpUser = document.getElementById("setting-smtp-user").value.trim();
+    const smtpPass = document.getElementById("setting-smtp-pass").value;
+    const emailEnabled = document.getElementById("setting-email-enabled").checked;
+    try {
+      const res = await api("/settings", {
+        method: "POST",
+        body: JSON.stringify({
+          alert_email: email,
+          smtp_server: smtpServer,
+          smtp_port: smtpPort,
+          smtp_user: smtpUser,
+          smtp_password: smtpPass,
+          email_alerts_enabled: emailEnabled.toString()
+        })
+      });
+      if (res.success) showToast("Email alert settings saved!", "success");
+    } catch(e) { showToast("Failed to save email settings.", "error"); }
+  });
+
+  // Test Email Button
+  document.getElementById("test-email-btn")?.addEventListener("click", async () => {
+    const email = document.getElementById("setting-alert-email").value.trim();
+    const btn = document.getElementById("test-email-btn");
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Sending...`;
+    try {
+      const res = await api("/settings/test-email", { method: "POST", body: JSON.stringify({ email }) });
+      if (res.success) {
+        showToast(res.message, "success");
+      } else {
+        showToast(res.message || "Email alert logged.", "warning");
+      }
+      loadNotifications(true);
+    } catch(e) {
+      showToast("Could not send test email.", "error");
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+    }
+  });
+
+  // Push Notifications Button
+  document.getElementById("enable-push-btn")?.addEventListener("click", async () => {
+    if (!("Notification" in window)) {
+      showToast("Web Notifications not supported on this browser.", "warning");
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      showToast("Push notifications enabled!", "success");
+      try {
+        new Notification("AuraXL Alert: Push Active", {
+          body: "AuraXL real-time website monitoring alerts are active!",
+          icon: "/logo.png"
+        });
+      } catch(e){}
+    } else {
+      showToast("Notification permission denied.", "error");
+    }
   });
 
   document.getElementById("password-form")?.addEventListener("submit", async (e) => {
@@ -507,5 +575,13 @@ async function loadSettings() {
     document.getElementById("setting-interval").value=d.monitor_interval_minutes||"5";
     document.getElementById("setting-auto-enabled").checked=d.auto_monitor_enabled==="true";
     document.getElementById("setting-sound-enabled").checked=d.sound_alerts==="true";
+    
+    // Email settings
+    if (document.getElementById("setting-alert-email")) document.getElementById("setting-alert-email").value = d.alert_email || "31pranav104@gmail.com";
+    if (document.getElementById("setting-smtp-server")) document.getElementById("setting-smtp-server").value = d.smtp_server || "smtp.gmail.com";
+    if (document.getElementById("setting-smtp-port")) document.getElementById("setting-smtp-port").value = d.smtp_port || "587";
+    if (document.getElementById("setting-smtp-user")) document.getElementById("setting-smtp-user").value = d.smtp_user || "";
+    if (document.getElementById("setting-smtp-pass")) document.getElementById("setting-smtp-pass").value = d.smtp_password || "";
+    if (document.getElementById("setting-email-enabled")) document.getElementById("setting-email-enabled").checked = d.email_alerts_enabled !== "false";
   } catch(e){}
 }

@@ -1,4 +1,4 @@
-﻿import socket
+import socket
 import ssl
 import time
 import urllib.parse
@@ -149,16 +149,27 @@ class WebsiteCrawler:
                 support_ticket_template=issue.get("support_ticket_template", "")
             )
             
-        # Dispatch Notification
+        # Dispatch Notification & Email Alert
         if self.detected_issues:
             top_issue = self.detected_issues[0]
+            notif_msg = f"AuraXL Deep Audit found {len(self.detected_issues)} issue(s) on {self.base_domain}. Health Score: {health_score}/100. Action required."
             add_notification(
                 title=f"Site Alert: {top_issue['title']}",
-                message=f"AuraXL Deep Audit found {len(self.detected_issues)} issue(s) on {self.base_domain}. Health Score: {health_score}/100. Action required.",
+                message=notif_msg,
                 severity=top_issue["severity"],
                 related_url=self.target_url,
                 category="AUDIT"
             )
+            try:
+                from email_notifier import send_email_alert
+                send_email_alert(
+                    title=top_issue['title'],
+                    severity=top_issue['severity'],
+                    details=f"{top_issue.get('description', notif_msg)}<br><br><strong>Root Cause:</strong> {top_issue.get('root_cause', 'N/A')}",
+                    issue_data=top_issue
+                )
+            except Exception as em_err:
+                print(f"Email alert error: {em_err}")
         else:
             add_notification(
                 title="Deep Audit: All Systems Optimal",
@@ -235,9 +246,10 @@ class WebsiteCrawler:
         except ssl.SSLError as e:
             result["status"] = "SSL_ERROR"
             result["details"] = str(e)
+            resolved_ip = socket.gethostbyname(self.base_domain) if self.base_domain else "Unknown IP"
             diag = agent_engine.diagnose_issue("SSL_HANDSHAKE_EOF", {
                 "url": self.target_url,
-                "ip": "34.120.137.41",
+                "ip": resolved_ip,
                 "details": str(e)
             })
             diag["url"] = self.target_url
@@ -246,14 +258,40 @@ class WebsiteCrawler:
             result["status"] = "UNREACHABLE"
             result["details"] = str(e)
             if "EOF" in str(e) or "10054" in str(e) or "reset" in str(e).lower():
+                resolved_ip = socket.gethostbyname(self.base_domain) if self.base_domain else "Unknown IP"
                 diag = agent_engine.diagnose_issue("SSL_HANDSHAKE_EOF", {
                     "url": self.target_url,
-                    "ip": "34.120.137.41",
+                    "ip": resolved_ip,
                     "details": str(e)
                 })
                 diag["url"] = self.target_url
                 self.detected_issues.append(diag)
         return result
+
+    def probe_live_heartbeat(self) -> Dict[str, Any]:
+        """High-speed real-time live probe (runs in <400ms) for continuous live dashboard updates"""
+        start_time = time.time()
+        dns_res = self._deep_probe_dns()
+        resolved_ip = dns_res.get("ips", ["Unknown"])[0] if dns_res.get("ips") else "Unknown"
+        tcp_res = self._probe_tcp_ports(dns_res.get("ips", []))
+        ssl_res = self._deep_probe_ssl()
+        http_res = self._deep_probe_http()
+        elapsed_ms = round((time.time() - start_time) * 1000, 1)
+
+        is_online = http_res.get("accessible", False)
+        status_label = "HEALTHY" if (is_online and ssl_res.get("valid")) else ("WARNING" if tcp_res.get("port_443_https") else "CRITICAL")
+        
+        return {
+            "target_url": self.target_url,
+            "timestamp": datetime.now().isoformat(),
+            "elapsed_ms": elapsed_ms,
+            "status": status_label,
+            "ip": resolved_ip,
+            "dns": dns_res,
+            "tcp": tcp_res,
+            "ssl": ssl_res,
+            "http": http_res
+        }
 
     def _deep_probe_http(self) -> Dict[str, Any]:
         result = {
@@ -267,7 +305,7 @@ class WebsiteCrawler:
         for test_url in [self.target_url, f"http://{self.base_domain}", f"https://{self.root_domain}"]:
             t0 = time.time()
             try:
-                client = httpx.Client(verify=False, follow_redirects=True, timeout=7.0)
+                client = httpx.Client(verify=False, follow_redirects=True, timeout=5.0)
                 resp = client.get(test_url)
                 resp_time = round((time.time() - t0) * 1000, 2)
                 result["accessible"] = True
@@ -298,7 +336,8 @@ class WebsiteCrawler:
 
     def _probe_essential_routes_during_outage(self, dns_res: Dict, ssl_res: Dict, http_res: Dict):
         """When origin server connection drops, audits every key route to map complete outage coverage"""
-        ip = dns_res.get("ips", ["34.120.137.41"])[0] if dns_res.get("ips") else "34.120.137.41"
+        resolved_ips = dns_res.get("ips", [])
+        ip = resolved_ips[0] if resolved_ips else "Unknown"
         err_msg = ssl_res.get("details") or http_res.get("error") or "Connection reset by peer"
         
         for route in COMMON_ROUTES:
