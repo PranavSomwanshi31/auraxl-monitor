@@ -16,8 +16,10 @@ if hasattr(sys.stdout, "reconfigure"):
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 
+from datetime import datetime, timezone
+
 from storage import (
-    init_db, get_latest_scan, get_all_scans, get_scanned_pages,
+    init_db, get_connection, get_latest_scan, get_all_scans, get_scanned_pages,
     get_detected_issues, get_issue_by_id, get_notifications,
     mark_notification_read, mark_all_notifications_read, clear_all_notifications,
     get_all_settings, set_setting, get_setting
@@ -38,6 +40,28 @@ CORS(app)
 # Initialize Storage & Default Admin
 init_db()
 ensure_default_admin()
+
+# --- Health Check Endpoint (Render & Container Health Monitoring) ---
+@app.route("/health", methods=["GET"])
+def health_check():
+    """
+    Standard backend health check endpoint.
+    Public, unauthenticated, fast, returns 200 OK with service metadata.
+    """
+    db_status = "healthy"
+    try:
+        conn = get_connection()
+        conn.execute("SELECT 1")
+        conn.close()
+    except Exception as e:
+        db_status = f"degraded: {str(e)}"
+
+    return jsonify({
+        "status": "healthy",
+        "service": "backend",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "database": db_status
+    }), 200
 
 # Auth Middleware Helper
 def get_authenticated_user():
