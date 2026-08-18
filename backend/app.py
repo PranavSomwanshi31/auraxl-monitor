@@ -97,7 +97,22 @@ def update_password():
         return jsonify({"success": False, "error": msg}), 400
     return jsonify({"success": True, "message": msg})
 
+from crawler import WebsiteCrawler
+
 # --- Monitor & Health Endpoints ---
+@app.route("/api/monitor/live-ping", methods=["GET"])
+def get_live_ping():
+    user = get_authenticated_user()
+    if not user:
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+    target_url = get_setting("target_url", "https://www.auraxl.com")
+    try:
+        crawler = WebsiteCrawler(target_url=target_url)
+        live_data = crawler.probe_live_heartbeat()
+        return jsonify({"success": True, "data": live_data})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/monitor/status", methods=["GET"])
 def get_monitor_status():
     user = get_authenticated_user()

@@ -1,12 +1,14 @@
-﻿// AuraXL Agentic Monitor Frontend Logic - Seamless Firebase & Cloud Edition
-const DEFAULT_GLOBAL_BACKEND = "https://pamela-productive-ide-figured.trycloudflare.com";
+﻿// AuraXL Agentic Monitor Frontend Logic - Real-Time Live Telemetry Edition
+const DEFAULT_GLOBAL_BACKEND = "https://auraxl-monitor.onrender.com";
 
 let authToken = localStorage.getItem("auraxl_token") || "";
 let currentUser = null;
 let activeTab = "dashboard";
 let pollingTimer = null;
+let heartbeatTimer = null;
 let currentIssues = [];
 let deferredPrompt = null;
+let lastHeartbeatSeconds = 0;
 
 // Backend API configuration
 let API_BASE = localStorage.getItem("auraxl_api_base") || "";
@@ -15,7 +17,6 @@ function getApiBase() {
   if (API_BASE && API_BASE.trim() !== "") {
     return API_BASE.replace(/\/$/, "");
   }
-  // If running on Firebase Hosting (web.app / firebaseapp.com), use the global tunnel default
   if (window.location.hostname.includes("web.app") || window.location.hostname.includes("firebaseapp.com")) {
     return DEFAULT_GLOBAL_BACKEND;
   }
@@ -87,6 +88,7 @@ function handleUnauthorized() {
   document.getElementById("auth-modal").classList.remove("hidden");
   document.getElementById("main-app").classList.add("hidden");
   if (pollingTimer) clearInterval(pollingTimer);
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
 }
 
 // App Init
@@ -121,12 +123,60 @@ function showApp() {
   document.getElementById("user-display-name").textContent = currentUser?.display_name || "Admin";
   switchTab(activeTab);
   loadDashboard();
+  loadLiveHeartbeat();
   loadNotifications();
+  
   if (pollingTimer) clearInterval(pollingTimer);
   pollingTimer = setInterval(() => {
     if (activeTab === "dashboard") loadDashboard(false);
     loadNotifications(false);
-  }, 8000);
+  }, 6000);
+
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = setInterval(loadLiveHeartbeat, 4000);
+}
+
+// Real-Time Live Heartbeat Probe
+async function loadLiveHeartbeat() {
+  try {
+    const res = await api("/monitor/live-ping");
+    if (!res.success || !res.data) return;
+    const live = res.data;
+    
+    // Status Elements
+    const titleEl = document.getElementById("live-status-title");
+    const pingEl = document.getElementById("live-radar-ping");
+    const dotEl = document.getElementById("live-radar-dot");
+    const codeEl = document.getElementById("live-http-code");
+    const ipEl = document.getElementById("live-ip-badge");
+    const msEl = document.getElementById("live-ping-ms");
+    const checkedEl = document.getElementById("live-last-checked");
+
+    const isHttpOk = live.http?.accessible;
+    const isSslOk = live.ssl?.valid;
+    const statusCode = live.http?.status_code || 0;
+    const pingMs = Math.round(live.elapsed_ms || 0);
+    const ip = live.ip || "Resolving...";
+
+    if (ipEl) ipEl.textContent = ip;
+    if (msEl) msEl.textContent = `${pingMs}ms`;
+    if (codeEl) codeEl.textContent = statusCode > 0 ? `HTTP ${statusCode}` : "CONN DROP";
+    if (checkedEl) checkedEl.textContent = `Live Ping: Active (${new Date().toLocaleTimeString()})`;
+
+    if (isHttpOk && isSslOk) {
+      if (titleEl) { titleEl.textContent = "LIVE: HEALTHY & ONLINE"; titleEl.className = "text-xs font-black uppercase tracking-wider text-emerald-400"; }
+      if (pingEl) pingEl.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+      if (dotEl) dotEl.className = "relative inline-flex rounded-full h-3 w-3 bg-emerald-500";
+    } else if (live.tcp?.port_443_https || live.tcp?.port_80_http) {
+      if (titleEl) { titleEl.textContent = "LIVE: SSL / TLS OUTAGE"; titleEl.className = "text-xs font-black uppercase tracking-wider text-[#F26727]"; }
+      if (pingEl) pingEl.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F26727] opacity-75";
+      if (dotEl) dotEl.className = "relative inline-flex rounded-full h-3 w-3 bg-[#F26727]";
+    } else {
+      if (titleEl) { titleEl.textContent = "LIVE: SERVER UNREACHABLE"; titleEl.className = "text-xs font-black uppercase tracking-wider text-rose-500"; }
+      if (pingEl) pingEl.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-500 opacity-75";
+      if (dotEl) dotEl.className = "relative inline-flex rounded-full h-3 w-3 bg-rose-600";
+    }
+  } catch(e) {}
 }
 
 function switchTab(tabName) {
@@ -227,13 +277,13 @@ async function runManualScan() {
   const scanBtn = document.getElementById("dash-quick-scan-btn");
   const origHtml = scanBtn?.innerHTML;
   if (scanBtn) { scanBtn.disabled=true; scanBtn.innerHTML=`<i class="fas fa-satellite-dish fa-spin"></i> Running Deep Audit...`; }
-  showToast("Deep audit initiated on www.auraxl.com...", "info");
+  showToast("Real-time live audit initiated on www.auraxl.com...", "info");
   try {
     const res = await api("/monitor/scan", {method:"POST"});
     if (res.success) {
       if (res.data.health_score < 50) playAlertSound("critical"); else playAlertSound("info");
-      showToast(`Audit done! Health: ${res.data.health_score}/100`, res.data.health_score>70?"success":"warning");
-      loadDashboard(); loadPages(); loadDiagnostics(); loadNotifications();
+      showToast(`Live Audit Complete! Health: ${res.data.health_score}/100`, res.data.health_score>70?"success":"warning");
+      loadDashboard(); loadPages(); loadDiagnostics(); loadNotifications(); loadLiveHeartbeat();
     }
   } catch(e) { showToast("Audit error. Check server connection.", "error"); }
   finally { if(scanBtn){scanBtn.disabled=false; scanBtn.innerHTML=origHtml;} }
@@ -251,9 +301,11 @@ async function loadDashboard(showLoader=true) {
     const pulseEl = document.getElementById("status-pulse");
     const ipEl = document.getElementById("dash-resolved-ip");
     if (document.getElementById("dash-target-url")) document.getElementById("dash-target-url").textContent = data.target_url || "www.auraxl.com";
-    let ip = "34.120.137.41";
+    
+    let ip = "147.79.69.172";
     if (data.summary?.dns?.ips?.length) ip = data.summary.dns.ips[0];
     if (ipEl) ipEl.textContent = `DNS IP: ${ip}`;
+    
     if (badgeEl && pulseEl) {
       if (score>=80) { badgeEl.className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200"; badgeEl.textContent="Healthy & Online"; pulseEl.className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"; }
       else if (score>=40) { badgeEl.className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-200"; badgeEl.textContent="Degraded / Warnings"; pulseEl.className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"; }

@@ -141,6 +141,33 @@
   <main class="flex-1 p-4 flex flex-col gap-4">
     <!-- TAB 1: DASHBOARD -->
     <section id="tab-dashboard" class="tab-content flex flex-col gap-4">
+      <!-- REAL-TIME TELEMETRY STATUS BAR -->
+      <div class="p-3.5 bg-slate-900 text-white rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-md border border-slate-800">
+        <div class="flex items-center gap-2.5">
+          <span class="relative flex h-3 w-3">
+            <span id="live-radar-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="live-radar-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="live-status-title" class="text-xs font-black uppercase tracking-wider text-emerald-400">LIVE PROBE ACTIVE</span>
+              <span id="live-http-code" class="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-slate-800 text-slate-300 rounded border border-slate-700">HTTP --</span>
+            </div>
+            <p id="live-last-checked" class="text-[10px] text-slate-400 font-mono">Live Ping: checking...</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs font-mono">
+          <div class="px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-1.5">
+            <i class="fas fa-network-wired text-[#2BC0D4] text-[11px]"></i>
+            <span id="live-ip-badge" class="text-slate-200">Resolving IP...</span>
+          </div>
+          <div class="px-2.5 py-1 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-1.5">
+            <i class="fas fa-stopwatch text-[#85D8D2] text-[11px]"></i>
+            <span id="live-ping-ms" class="text-slate-200">--ms</span>
+          </div>
+        </div>
+      </div>
+
       <div class="aura-card p-5 sm:p-6 rounded-3xl border border-teal-100 flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div class="flex items-center gap-5 w-full sm:w-auto">
           <div class="relative w-24 h-24 flex items-center justify-center flex-shrink-0">
@@ -159,7 +186,7 @@
               <span id="status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-50 border border-orange-200" style="color:#F26727;">Critical Outage</span>
             </div>
             <h3 class="text-xl font-extrabold text-slate-800 truncate">www.auraxl.com</h3>
-            <p id="dash-resolved-ip" class="text-xs text-slate-500 font-mono mt-0.5">DNS IP: 34.120.137.41</p>
+            <p id="dash-resolved-ip" class="text-xs text-slate-500 font-mono mt-0.5">DNS IP: Resolving...</p>
           </div>
         </div>
         <button id="dash-quick-scan-btn" class="w-full sm:w-auto px-6 py-3.5 aura-gradient-btn rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
