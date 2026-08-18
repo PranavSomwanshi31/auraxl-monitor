@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+env/
+.system_generated/
+GLOBAL_ACCESS_URL.txt
+*.log
